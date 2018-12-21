@@ -13,7 +13,10 @@
 
 // an MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
-int status;
+int status; //used by MPU9250 for error checking
+
+//controls loop switch
+int switchByte;
 
 long TimePrev = 0;
 float AccelX;
@@ -59,65 +62,69 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-	//Increment speed
-	speed += 1;
-	float FuncSpeed = sin((float)speed / 1000);
-	//if((millis()/1000)%5 == 0){
-	//  FuncSpeed = 0.5;
-	//  }
-	//else if((millis()/1000)%1 == 0){
-	//  FuncSpeed = 0.5;
-	//  }
+	if (Serial.available() > 0) {
+		switchByte = Serial.read();
+	}
+	get_angle();
+	switch (switchByte) 
+	{
+	case 'r':
+		get_angle();
+		break;
+	case 'g':
+		set_speed(0.3);
+		break;
+	case 's':
+		set_speed(0);
+		break;
+	default:
+		break;
+	}
+}
 
-
-
-
-
-	if (FuncSpeed < 0) {
+void set_speed(float Speed) {
+	if (Speed < 0) {
 		digitalWrite(BPin, LOW);
 		digitalWrite(APin, HIGH);
-		analogWrite(pwmPin, int(abs(FuncSpeed) * 255));
+		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
 	else {
 		digitalWrite(BPin, HIGH);
 		digitalWrite(APin, LOW);
-		analogWrite(pwmPin, int(abs(FuncSpeed) * 255));
+		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
+}
 
+void get_angle() {
 	// read the sensor
 	IMU.readSensor();
-	// display the data
 
-	AccelX = IMU.getAccelX_mss() / 9.81;
-	AccelZ = IMU.getAccelZ_mss() / 9.81;
+	// Normalise accelerometer values in accordance with gravity, important as these values will be combined using 'atan2f' to increase the angles accuracy
+	AccelX = constrain(IMU.getAccelX_mss(), -9.81,9.81) / 9.81;
+	AccelZ = constrain(IMU.getAccelZ_mss(), -9.81, 9.81) / 9.81;
 
-	GyroY = IMU.getGyroY_rads() - GyroYCal;
-
-	GyroAngle = Angle + GyroY * (micros() - TimePrev) / 1000000;
-
-	Angle = GyroAngle;
-
+	// Calculate (accel) angle in x-z plane using normalised x and z accelerometer values
 	AccelAngle = atan2f((float)AccelZ, (float)AccelX);
 
-	Angle = 0.98*Angle + 0.02 * AccelAngle;
+	// Correct gyro data using calibration value from setup
+	GyroY = IMU.getGyroY_rads() - GyroYCal;
+
+	
+	long TimeNow = micros();
+	long TimeDelta = TimeNow - TimePrev;
+	
+	if (TimeDelta > 200000) {
+		GyroAngle = AccelAngle;
+	}
+	else {
+		// Calculate (gyro) angle using Y axis gyro values
+		GyroAngle = Angle + GyroY * (TimeNow - TimePrev) / 1000000;
+	}
+
+	//Set previous time to be current time, used if/ when this function is run again
+	TimePrev = TimeNow;
 
 
-	//Serial.print(GyroAngle*180/PI,6);
-	//Serial.print("\t");
-
-	Serial.print(AccelAngle * 180 / PI, 6);
-	Serial.print("\t");
-
-	Serial.print(Angle * 180 / PI, 6);
-	Serial.print("\t");
-
-	Serial.print(FuncSpeed);
-	Serial.print("\t");
-
-	Serial.println("");
-
-	TimePrev = micros();
-
-	delay(10);
-
+	Angle = 0.98 * GyroAngle + 0.02 * AccelAngle;
 }
+
