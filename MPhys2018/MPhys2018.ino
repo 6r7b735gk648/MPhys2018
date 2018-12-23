@@ -118,7 +118,7 @@ void get_angle() {
 	}
 	else {
 		// Calculate (gyro) angle using Y axis gyro values
-		GyroAngle = Angle + GyroY * (TimeNow - TimePrev) / 1000000;
+		GyroAngle = Angle + GyroY * TimeDelta / 1000000;
 	}
 
 	//Set previous time to be current time, used if/ when this function is run again
