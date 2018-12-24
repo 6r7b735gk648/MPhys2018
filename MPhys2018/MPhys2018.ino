@@ -12,10 +12,11 @@
 #define pwmPin 3
 
 //PID controller gains
-float Gain_Prop = 3;
+float Gain_Prop = 2.5;
 float Gain_Integral = 0;
 float Gain_Diff = 0;
 
+float MotorSpeed = 0;
 
 // An MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
@@ -24,19 +25,24 @@ MPU9250 IMU(Wire, 0x68);
 int status; 
 
 // Controls loop switch
-int switchByte;
+int switchByte = '0';
 
 // Time at which get_angle was last ran in micro seconds (overflow after approximately 70 minutes)
 long TimePrev = 0;
 
 // Calibration value for Y axis gyro data, established at setup
-float GyroYCal; 
+float GyroYCal = 0; 
 
 // 'Current' angle value in X-Z plane
-float Angle;
+float Angle = 0;
+
+// Angle the PID controller is aiming to achieve 
+float SetPointAngle = 0;
 
 // Current motor speed [-1,1]
 int speed = 0;
+// Max motor speed
+float MaxSpeed = 0.4;
 
 // The setup function runs once when you press reset or power the board
 void setup() {
@@ -75,11 +81,18 @@ void loop() {
 	case 'r':
 		get_angle();
 		break;
+	case 'c':
+		get_angle();
+		SetPointAngle = Angle;
+		delay(1);
+		break;
 	case 'g':
+		
 		set_speed(pid_controller());
 		break;
 	case 's':
-		set_speed(0);
+		MotorSpeed = 0;
+		set_speed(MotorSpeed);	
 		break;
 	default:
 		break;
@@ -103,9 +116,9 @@ void set_speed(float Speed) {
 float pid_controller() {
 	get_angle();
 
-	float PIDOutput = Gain_Prop * Angle;
+	float PIDOutput = Gain_Prop * (Angle - SetPointAngle) + 0.9 * MotorSpeed;
 
-	float MotorSpeed = constrain(PIDOutput, -0.2, 0.2);
+	MotorSpeed = constrain(PIDOutput, -MaxSpeed, MaxSpeed);
 
 	return MotorSpeed;
 }
