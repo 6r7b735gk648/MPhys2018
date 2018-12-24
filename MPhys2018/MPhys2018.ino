@@ -11,6 +11,12 @@
 #define APin 7
 #define pwmPin 3
 
+//PID controller gains
+float Gain_Prop = 3;
+float Gain_Integral = 0;
+float Gain_Diff = 0;
+
+
 // An MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
 
@@ -70,7 +76,7 @@ void loop() {
 		get_angle();
 		break;
 	case 'g':
-		set_speed(0.3);
+		set_speed(pid_controller());
 		break;
 	case 's':
 		set_speed(0);
@@ -83,15 +89,25 @@ void loop() {
 void set_speed(float Speed) {
 	//if speed is less than zero, set direction 
 	if (Speed < 0) {
-		digitalWrite(BPin, LOW);
-		digitalWrite(APin, HIGH);
+		digitalWrite(APin, LOW);
+		digitalWrite(BPin, HIGH);
 		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
 	else {
-		digitalWrite(BPin, HIGH);
-		digitalWrite(APin, LOW);
+		digitalWrite(APin, HIGH);
+		digitalWrite(BPin, LOW);
 		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
+}
+
+float pid_controller() {
+	get_angle();
+
+	float PIDOutput = Gain_Prop * Angle;
+
+	float MotorSpeed = constrain(PIDOutput, -0.2, 0.2);
+
+	return MotorSpeed;
 }
 
 void get_angle() {
