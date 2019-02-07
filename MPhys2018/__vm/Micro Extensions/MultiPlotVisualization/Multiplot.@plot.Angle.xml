@@ -4,7 +4,7 @@
     <CurveSettings>
       <CurveId>Angle</CurveId>
       <CurveDisplayName>Angle</CurveDisplayName>
-      <CurveLineTicks>None</CurveLineTicks>
+      <CurveLineTicks>XCross</CurveLineTicks>
       <CurveColor>#800000</CurveColor>
       <ChartAssignment2>0</ChartAssignment2>
     </CurveSettings>
@@ -13,7 +13,42 @@
       <CurveDisplayName>MotorSpeed</CurveDisplayName>
       <CurveLineTicks>XCross</CurveLineTicks>
       <CurveColor>#008000</CurveColor>
-      <ChartAssignment2>1</ChartAssignment2>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>AngleDiff</CurveId>
+      <CurveDisplayName>AngleDiff</CurveDisplayName>
+      <CurveLineTicks>None</CurveLineTicks>
+      <CurveColor>#000080</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>Angle-Setpoint</CurveId>
+      <CurveDisplayName>Angle-Setpoint</CurveDisplayName>
+      <CurveLineTicks>XCross</CurveLineTicks>
+      <CurveColor>Tomato</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>AngleProportional</CurveId>
+      <CurveDisplayName>AngleProportional</CurveDisplayName>
+      <CurveLineTicks>None</CurveLineTicks>
+      <CurveColor>#800080</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>AngleDerivative</CurveId>
+      <CurveDisplayName>AngleDerivative</CurveDisplayName>
+      <CurveLineTicks>Plus</CurveLineTicks>
+      <CurveColor>#008080</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>AngleIntegral</CurveId>
+      <CurveDisplayName>AngleIntegral</CurveDisplayName>
+      <CurveLineTicks>None</CurveLineTicks>
+      <CurveColor>#808000</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
     </CurveSettings>
   </CurveSettingCollection>
   <XSweepTime>20 sec</XSweepTime>
@@ -21,9 +56,9 @@
   <DisplayRefreshRate>AsDataComesIn</DisplayRefreshRate>
   <ChartType>LineChart</ChartType>
   <OptimizeBinaryCurves>On</OptimizeBinaryCurves>
-  <CurveDistribution>MultipleCharts</CurveDistribution>
+  <CurveDistribution>SingeChart</CurveDistribution>
   <TriggerEnabled>false</TriggerEnabled>
   <TriggerCondition>None</TriggerCondition>
   <TriggerMode>Continuous</TriggerMode>
-  <LineWidths2>Auto</LineWidths2>
+  <LineWidths2>Thin</LineWidths2>
 </PlotSettings>
