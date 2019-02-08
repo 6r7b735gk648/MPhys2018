@@ -12,11 +12,12 @@
 #define pwmPin 3
 
 //PID controller gains
-float Gain_Proportional = 0.02;
-float Gain_Integral = 0.00;
-float Gain_Derivative = 0.0001;
-
+float Gain_Proportional = 11.5;
+float Gain_Integral = 0.1;
+float Gain_Derivative = 1.1;
+float Gain_Rotor_Speed = -0.1;
 float MotorSpeed = 0;
+float PIDOutput = 0;
 
 // An MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
@@ -25,7 +26,7 @@ MPU9250 IMU(Wire, 0x68);
 int status; 
 
 // Controls loop switch
-int switchByte = '0';
+int switchByte = 'c';
 
 // Time at which get_angle was last ran in micro seconds (overflow after approximately 70 minutes)
 long TimePrevGetAngle = 0;
@@ -55,7 +56,7 @@ float MaxSpeed = 1;
 
 // The setup function runs once when you press reset or power the board
 void setup() {
-	Serial.setTimeout(50);
+	Serial.setTimeout(25);
 	//Initialise serial to display angle data
 	Serial.begin(115200);
 	while (!Serial) {}
@@ -84,6 +85,7 @@ void setup() {
 void loop() {
 	if (Serial.available() > 0) {
 		switchByte = Serial.read();
+		Serial.write(switchByte);
 	}
 
 	
@@ -124,6 +126,7 @@ void set_speed(float Speed) {
 }
 
 float pid_controller() {
+	delay(50);
 	get_angle();
 
 	float TimeDelta = (AngleTime - AngleTimePrev) / 1000000;
@@ -135,10 +138,11 @@ float pid_controller() {
 	AngleProportional = Gain_Proportional * (Angle - SetPointAngle);
 	AngleIntegral += Gain_Integral * (Angle - SetPointAngle) * TimeDelta;
 	AngleDerivative = Gain_Derivative * ((Angle - SetPointAngle) - (AnglePrev - SetPointAngle)) / TimeDelta;
-	float PIDOutput = AngleProportional + AngleIntegral + AngleDerivative;
+	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
 
 	// Convert PIDOutput which is 'acceleration' and adding it to 90% of the motor speed to help slow the wheel down if stable, then normalised [-1,1] as a motor speed for PWM control
-	MotorSpeed = constrain(PIDOutput + MotorSpeed, -MaxSpeed, MaxSpeed);
+	///MotorSpeed = constrain(PIDOutput + MotorSpeed, -MaxSpeed, MaxSpeed);
+	MotorSpeed = constrain(PIDOutput, -MaxSpeed, MaxSpeed);
 
 	return MotorSpeed;
 }
@@ -173,11 +177,11 @@ void get_angle() {
 		// Calculate (gyro) angle using Y axis gyro values
 		GyroAngle = Angle + GyroY * TimeDelta / 1000000;
 		// Calculate angle using complamentary filter
-		Angle = 0.98 * GyroAngle + 0.02 * AccelAngle;
+		Angle = 0.985 * GyroAngle + 0.015 * AccelAngle;
 	}
 
 	// Set previous time to be current time, used if/ when this function is run again
 	TimePrevGetAngle = AngleTime;
-
+	
 }
 
