@@ -3,6 +3,7 @@
  Created:	12/13/2018 11:38:35 AM
  Author:	George
 */
+
 #include <math.h>
 #include <MPU9250.h>
 
@@ -12,10 +13,10 @@
 #define pwmPin 3
 
 //PID controller gains
-float Gain_Proportional = 11.5;
-float Gain_Integral = 0.1;
-float Gain_Derivative = 1.1;
-float Gain_Rotor_Speed = -0.1;
+float Gain_Proportional = 7.5;
+float Gain_Integral = 0.0;
+float Gain_Derivative = 0.;
+float Gain_Rotor_Speed = -0.;
 float MotorSpeed = 0;
 float PIDOutput = 0;
 
@@ -32,6 +33,7 @@ int switchByte = 'c';
 long TimePrevGetAngle = 0;
 
 // Calibration value for Y axis gyro data, established at setup
+float GyroAngle = 0;
 float GyroYCal = 0; 
 
 // 'Current' angle value in X-Z plane
@@ -58,7 +60,8 @@ float MaxSpeed = 1;
 void setup() {
 	Serial.setTimeout(25);
 	//Initialise serial to display angle data
-	Serial.begin(115200);
+	//Serial.begin(115200);
+	Serial.begin(56000);
 	while (!Serial) {}
 
 	//Initalise OUTPUT pins
@@ -83,6 +86,7 @@ void setup() {
 
 // The loop function runs repeatedly until power down or reset
 void loop() {
+	//long StartTime = micros();
 	if (Serial.available() > 0) {
 		switchByte = Serial.read();
 		Serial.write(switchByte);
@@ -109,6 +113,8 @@ void loop() {
 	default:
 		break;
 	}
+	//long RunTime = micros() - StartTime;
+	//Serial.println(RunTime);
 }
 
 void set_speed(float Speed) {
@@ -126,18 +132,23 @@ void set_speed(float Speed) {
 }
 
 float pid_controller() {
-	delay(50);
+	while (micros() < AngleTimePrev + 2500)
+	{
+	}
 	get_angle();
 
+	float Error = Angle - SetPointAngle;
 	float TimeDelta = (AngleTime - AngleTimePrev) / 1000000;
 
 	if (abs(Angle - SetPointAngle) >= 0.174533) {
+		
 		switchByte = 's';
+		return 0;
 	}
 
-	AngleProportional = Gain_Proportional * (Angle - SetPointAngle);
-	AngleIntegral += Gain_Integral * (Angle - SetPointAngle) * TimeDelta;
-	AngleDerivative = Gain_Derivative * ((Angle - SetPointAngle) - (AnglePrev - SetPointAngle)) / TimeDelta;
+	AngleProportional = Gain_Proportional * Error;
+	AngleIntegral = AngleIntegral + Gain_Integral * Error * TimeDelta;
+	AngleDerivative = Gain_Derivative * (Error - (AnglePrev - SetPointAngle)) / TimeDelta;
 	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
 
 	// Convert PIDOutput which is 'acceleration' and adding it to 90% of the motor speed to help slow the wheel down if stable, then normalised [-1,1] as a motor speed for PWM control
@@ -158,26 +169,28 @@ void get_angle() {
 	float AccelZ = constrain(IMU.getAccelZ_mss(), -9.81, 9.81) / 9.81;
 
 	// Calculate (accel) angle in x-z plane using normalised x and z accelerometer values
-	float AccelAngle = atan2f((float)AccelZ, (float)AccelX);
+	float AccelAngle = atan2f(AccelZ, AccelX);
 
 	// Correct gyro data using calibration value from setup
 	float GyroY = IMU.getGyroY_rads() - GyroYCal;
 
 	//Initalise time values for linear approx of gyro differentiation
 	AngleTime = micros();
-	long TimeDelta = AngleTime - TimePrevGetAngle;
-	float GyroAngle = NAN;
+	float TimeDelta = (AngleTime - TimePrevGetAngle) / 1000000;
 
-	// If time since get_angle was last ran is greater than 0.2 seconds, do not us gyro data as time interval too great for linear approxmation of gyro differatiation
-	if (TimeDelta > 200000) {
+	// If time since get_angle was last ran is greater than 0.2 seconds, do not us gyro data as time interval too great for approxmation of gyro integration
+	if (TimeDelta > 0.2) {
 		// Set angle to Accelerometer angle
 		Angle = AccelAngle;
 	}
 	else {
 		// Calculate (gyro) angle using Y axis gyro values
-		GyroAngle = Angle + GyroY * TimeDelta / 1000000;
+		//GyroAngle = Angle + GyroY * TimeDelta / 1000000;
+		GyroAngle = GyroAngle + GyroY * TimeDelta;
+		Angle = Angle + GyroY*TimeDelta;
 		// Calculate angle using complamentary filter
-		Angle = 0.985 * GyroAngle + 0.015 * AccelAngle;
+		Angle = 0.98 * Angle + 0.02 * AccelAngle;
+
 	}
 
 	// Set previous time to be current time, used if/ when this function is run again
