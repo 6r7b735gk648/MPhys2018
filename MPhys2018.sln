@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bandwidthExample", "..\..\.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "I2CScanner", "I2CScanner\I2CScanner.vcxproj", "{D12F12DC-883C-4751-9A91-A05EA742039E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Advanced_I2C", "..\..\..\Documents\Arduino\My Examples\Advanced_I2C\Advanced_I2C.vcxproj", "{444910C9-EE09-4896-A114-91E0EC2421B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -27,6 +29,10 @@ Global
 		{D12F12DC-883C-4751-9A91-A05EA742039E}.Debug|x86.Build.0 = Debug|Win32
 		{D12F12DC-883C-4751-9A91-A05EA742039E}.Release|x86.ActiveCfg = Release|Win32
 		{D12F12DC-883C-4751-9A91-A05EA742039E}.Release|x86.Build.0 = Release|Win32
+		{444910C9-EE09-4896-A114-91E0EC2421B5}.Debug|x86.ActiveCfg = Debug|Win32
+		{444910C9-EE09-4896-A114-91E0EC2421B5}.Debug|x86.Build.0 = Debug|Win32
+		{444910C9-EE09-4896-A114-91E0EC2421B5}.Release|x86.ActiveCfg = Release|Win32
+		{444910C9-EE09-4896-A114-91E0EC2421B5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
