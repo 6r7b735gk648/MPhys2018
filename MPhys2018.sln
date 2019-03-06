@@ -11,7 +11,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "I2CScanner", "I2CScanner\I2
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Advanced_I2C", "..\..\..\Documents\Arduino\My Examples\Advanced_I2C\Advanced_I2C.vcxproj", "{444910C9-EE09-4896-A114-91E0EC2421B5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConstantSpeed", "ConstantSpeed\ConstantSpeed.vcxproj", "{34102BFD-C8DA-49A3-A938-CC15ED2325C5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpeedVsNoise", "ConstantSpeed\ConstantSpeed.vcxproj", "{34102BFD-C8DA-49A3-A938-CC15ED2325C5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

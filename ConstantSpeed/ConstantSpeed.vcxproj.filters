@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ConstantSpeed.ino" />
+    <None Include="SpeedVsNoise.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ConstantSpeed.vsarduino.h">
