@@ -5,14 +5,14 @@
 MPU9250 IMU(Wire, 0x68);
 
 //Defining OUTPUT pins
-#define BPin 8
-#define APin 7
+#define BPin 7
+#define APin 8
 #define pwmPin 3
 
 //PID controller gains
-float Gain_Proportional = 3.5;
+float Gain_Proportional = 6.0;
 float Gain_Integral = 0.0;
-float Gain_Derivative = 0.0;
+float Gain_Derivative = 0.4;
 float Gain_Rotor_Speed = -0.;
 float MotorSpeed = 0;
 float PIDOutput = 0;
@@ -37,13 +37,14 @@ float AngleIntegral = 0;
 float AngleDerivative = 0;
 
 // Max motor speed
-# define MaxSpeed 1
+# define MaxSpeed 0.8
 // Scale factor for accelerometer z reading
 #define AccelxBias -0.0208
 #define AccelxSF 0.999759249
 #define AccelzBias -0.635659927
 #define AccelzSF 0.991977013
 #define gravity 9.8071495
+
 // The setup function runs once when you press reset or power the board
 void setup() {
 	
@@ -90,7 +91,7 @@ void setup() {
 	}
 
 	// Set Digital Low Pass Filter (DLPF) bandwidth to 184 Hz
-	status = IMU.setDlpfBandwidth(MPU9250::DLPF_BANDWIDTH_184HZ);
+	status = IMU.setDlpfBandwidth(MPU9250::DLPF_BANDWIDTH_MaxHZ);
 	if (status < 0) {
 		Serial.println("Set digital low pass filter unsuccessful");
 		Serial.print("Error Status: ");
@@ -127,13 +128,22 @@ void loop() {
 	{
 	case 'r':
 		get_angle();
+
 		break;
 	case 'c':
+
 		get_angle();
-		SetPointAngle = Angle;
+		if (micros() > AngleTimePrev + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
+		{
+			SetPointAngle = Angle;
+		}
+		
 		break;
 	case 'g':
+		if (micros() > AngleTimePrev + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
+		{
 			set_speed(pid_controller());
+		}
 		break;
 	case 's':
 		MotorSpeed = 0;
@@ -165,21 +175,14 @@ float pid_controller() {
 	float TimeDelta = (AngleTime - AngleTimePrev) / 1000000;
 	float Error = Angle - SetPointAngle;
 	
-	/*
-	while (micros() < AngleTimePrev + 2500)
-	{
-	}
-	
 
 	
-	
-	
-	if (abs(Error) >= 0.174533*2) {
+	if (abs(Error) >= 0.174533) {
 		Serial.println("Error: Angle out of bounds");
 		switchByte = 's';
 		return 0;
 	}
-	*/
+
 	AngleProportional = Gain_Proportional * Error;
 	AngleIntegral = AngleIntegral + Gain_Integral * Error * TimeDelta;
 	AngleDerivative = Gain_Derivative * (Error - (AnglePrev - SetPointAngle)) / TimeDelta;
@@ -225,7 +228,7 @@ void get_angle() {
 		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
 		Angle = Angle + IMU.getGyroY_rads()*TimeDelta;
 		// Calculate angle using complamentary filter
-		Angle = 0.98 * Angle + 0.02 * AccelAngle;
+		Angle = 0.998 * Angle + (1-0.998) * AccelAngle;
 	}
 
 }
