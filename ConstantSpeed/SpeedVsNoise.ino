@@ -5,7 +5,7 @@
 //Defining OUTPUT pins
 #define BPin 8
 #define APin 7
-#define pwmPin 3
+#define pwmPin 3 // pin 3 has pwm frequency of 489Hz , pin 5 is 980Hz
 
 // an MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
@@ -54,12 +54,14 @@ void setup() {
 	Angle = atan2f((float)AccelZ, (float)AccelX);
 	//Calibrate the gyro (Sensor must be stationary for accuracy)
 	GyroYCal = IMU.getGyroY_rads();
+	Serial.println("Set up Successful");
 }
 
 // the loop function runs over and over again until power down or reset
 void loop() {
 	if (Serial.available() > 0) {
 		switchByte = Serial.read();
+		Serial.println((char)switchByte);
 	}
 
 	switch (switchByte)
@@ -80,6 +82,10 @@ void loop() {
 	case 's':
 		speed = 0;
 		set_speed(speed);
+		break;
+	case 'f':
+		set_speed(.5);
+		break;
 	default:
 		break;
 	}

@@ -2,17 +2,10 @@
 <PlotSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <CurveSettingCollection>
     <CurveSettings>
-      <CurveId>Error</CurveId>
-      <CurveDisplayName>Error</CurveDisplayName>
-      <CurveLineTicks>XCross</CurveLineTicks>
-      <CurveColor>Maroon</CurveColor>
-      <ChartAssignment2>0</ChartAssignment2>
-    </CurveSettings>
-    <CurveSettings>
-      <CurveId>Derivative</CurveId>
-      <CurveDisplayName>Derivative</CurveDisplayName>
-      <CurveLineTicks>XCross</CurveLineTicks>
-      <CurveColor>Turquoise</CurveColor>
+      <CurveId>AngleDeriv</CurveId>
+      <CurveDisplayName>AngleDeriv</CurveDisplayName>
+      <CurveLineTicks>None</CurveLineTicks>
+      <CurveColor>#800000</CurveColor>
       <ChartAssignment2>0</ChartAssignment2>
     </CurveSettings>
   </CurveSettingCollection>
@@ -21,9 +14,9 @@
   <DisplayRefreshRate>AsDataComesIn</DisplayRefreshRate>
   <ChartType>LineChart</ChartType>
   <OptimizeBinaryCurves>On</OptimizeBinaryCurves>
-  <CurveDistribution>SingeChart</CurveDistribution>
+  <CurveDistribution>MultipleCharts</CurveDistribution>
   <TriggerEnabled>false</TriggerEnabled>
   <TriggerCondition>None</TriggerCondition>
   <TriggerMode>Continuous</TriggerMode>
-  <LineWidths2>Thin</LineWidths2>
+  <LineWidths2>Auto</LineWidths2>
 </PlotSettings>
