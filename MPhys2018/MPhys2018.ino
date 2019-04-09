@@ -4,19 +4,13 @@
 // An MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
 
-//Defining OUTPUT pins
-#define BPin 8
-#define APin 7
-#define pwmPin 3 // pin 3 = 490HZ, pin 5 = 980Hz
 
-//PID controller gains
-#define Gain_Proportional 45.5 //45.5	// previously working value 45.5
-#define  Gain_Integral 0.12		// previously working value 0.12
-#define  Gain_Derivative 3.		// previously working value 3.0
-#define  Gain_Rotor_Speed -0.02	// previously working value -0.02
+//PID controller gains					// Last stable value set
+#define Gain_Proportional	700000		// 600000.0
+#define  Gain_Integral		74000		// 64000.0 
+#define  Gain_Derivative	50000		//40000.0 
+#define  Gain_Rotor_Speed	-.001		//-.001
 
-
-float MotorSpeed = 0;
 float PIDOutput = 0;
 
 // Controls loop switch
@@ -39,20 +33,17 @@ float Angle_minus11 = 0,	Angle_minus11_Time = 0;
 float Angle_minus12 = 0,	Angle_minus12_Time = 0;
 float Angle_minus13 = 0,	Angle_minus13_Time = 0;
 
-// History of Error values  (Where arduino max array size float = 8191 elements)
-//#define Error_array_len 20
-//float Error_array[Error_array_len][2];
-//int Error_array_index = 0;
 
+#define int16_tMin -32768
+#define int16_tMax 32767
 
 // Angle the PID controller is aiming to achieve 
-float SetPointAngle = -0.06058467;
+float SetPointAngle = 0;
 float AngleProportional = 0;
 float AngleIntegral = 0;
 float AngleDerivative = 0;
 
-// Max motor speed
-# define MaxSpeed 1.
+
 // Scale factor for accelerometer z reading
 #define AccelxBias -0.0208
 #define AccelxSF 0.999759249
@@ -62,7 +53,8 @@ float AngleDerivative = 0;
 
 // The setup function runs once when you press reset or power the board
 void setup() {
-	
+	Wire.begin();
+
 	//Initialise serial For debug use
 	Serial.begin(115200);
 	Serial.setTimeout(2);
@@ -133,26 +125,12 @@ void loop() {
 			Serial.println("Calibrating setpoint...");
 			break;
 		case 'g':
-			
 			break;
+
 		case 's':
 			Serial.println("STOP!");
 			break;
-		//case 'p':
-		//	Serial.println("Printing AngularErrorArray...");
-		//	for (int i = 0; i < Error_array_len; i++)
-		//	{
-		//		Serial.print(Error_array[i][0],6); //arduino only has 6-7 digit precision on both float and double
-		//		Serial.print(" ");
-		//		Serial.println(Error_array[i][1], 6); //arduino only has 6-7 digit precision on both float and double
-		//		Error_array[i][0] = 0;
-		//		Error_array[i][1] = 0;
-		//	}
-		//	Serial.println("Cleared Error_array values and resetting Error_array index...");
-		//	Error_array_index = 0;
-		//	Serial.println("Done.");
-		//	switchByte = 's';
-		//	break;
+
 		default:
 			break;
 		}
@@ -162,16 +140,16 @@ void loop() {
 	{
 	case 'r':
 		get_angle();
-
 		break;
+
 	case 'c':
 		get_angle();
 		if (micros() > Angle_minus1_Time + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
 		{
 			SetPointAngle = Angle_0;
 		}
-		
 		break;
+
 	case 'g':
 		AngleProportional = 0;
 		AngleIntegral = 0;
@@ -180,66 +158,52 @@ void loop() {
 		Serial.println("PID values cleared");
 		Serial.println("Running PID stabilisation...");
 		break;
+
 	case 'q':
 		if (micros() > Angle_minus1_Time + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
 		{
-			set_speed(pid_controller());
+			pid_controller();
 		}
 		break;
-	case 'p':
-		get_angle();
+
 	case 's':
-		MotorSpeed = 0;
-		set_speed(MotorSpeed);	
+		SendSpeed(0);	
 		get_angle();
 		break;
+
 	default:
-		MotorSpeed = 0;
-		set_speed(MotorSpeed);
+
+		SendSpeed(0);
 		get_angle();
 		break;
 	}
-	//long RunTime = micros() - StartTime;
-	//Serial.println(RunTime);
 }
 
-void set_speed(float Speed) {
-	//Sign of Speed value is converted to direction of motor 
-	if (Speed < 0) {
-		digitalWrite(APin, LOW);
-		digitalWrite(BPin, HIGH);
-		analogWrite(pwmPin, int(abs(Speed) * 255));
-	}
-	else {
-		digitalWrite(APin, HIGH);
-		digitalWrite(BPin, LOW);
-		analogWrite(pwmPin, int(abs(Speed) * 255));
-	}
+void SendSpeed(float Speed) {
+	byte myArray[2];
+	int16_t SetPoint = constrain(Speed, int16_tMin, int16_tMax); //-32, 768 .. 32, 767
+	myArray[0] = (SetPoint >> 8) & 0xFF;
+	myArray[1] = SetPoint & 0xFF;
+
+	Wire.beginTransmission(9); // transmit to device #9
+	Wire.write(myArray, 2);              // sends 
+	Wire.endTransmission();    // stop transmitting
 }
 
-float pid_controller() {
+void pid_controller() {
 	get_angle();
+	
 	float Error = Angle_0 - SetPointAngle;
-	//Serial.print(Angle_0_Time);
-	//Serial.print(',');
-	//Serial.println(Error, 4);
 
-
-
+	//Stops motor if device becomes unstable and falls over: (+-) 0.174533 rad = 10 degrees
 	if (abs(Error) >= 0.174533) {
 		Serial.println("Error: Angle out of bounds");
 		switchByte = 's';
-		return 0;
 	}
 
 	AngleProportional = Gain_Proportional * Error;
-	AngleIntegral =		AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
-/*
-	AngleDerivative =	w * AngleDerivative +
-						Gain_Derivative * (1-w) * (-2 * (Angle_minus3 - SetPointAngle) + 9 * (Angle_minus2 - SetPointAngle) - 18 * (Angle_minus1 - SetPointAngle)	+ 11 * (Angle_0 - SetPointAngle))
-										/ (6 * ((Angle_0_Time - Angle_minus3_Time) / 4)/1000000);
-*/
-
+	
+	AngleIntegral =	AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
 
 	AngleDerivative =	Gain_Derivative *	(((Angle_0 - SetPointAngle) - (Angle_minus1 - SetPointAngle))	/ ((Angle_0_Time - Angle_minus1_Time)/1000000)* (.27473) +
 											 ((Angle_minus1 - SetPointAngle) - (Angle_minus2 - SetPointAngle)) / ((Angle_minus1_Time - Angle_minus2_Time) / 1000000) * (.24176) +
@@ -256,38 +220,9 @@ float pid_controller() {
 											 ((Angle_minus12 - SetPointAngle) - (Angle_minus13 - SetPointAngle)) / ((Angle_minus12_Time - Angle_minus13_Time) / 1000000) * (-.12088));
 
 
-
-/*
-	AngleDerivative = Gain_Derivative *		(0.03846 * Angle_0 
-											+0.03147 * Angle_minus1
-											+0.02448 * Angle_minus2
-											+0.01748 * Angle_minus3
-											+0.01049 * Angle_minus4
-											+0.00350 * Angle_minus5
-											-0.00350 * Angle_minus6
-											-0.01049 * Angle_minus7
-											-0.01748 * Angle_minus8
-											-0.02448 * Angle_minus9
-											-0.03147 * Angle_minus10
-											- 0.03846 * Angle_minus11)/((Angle_0_Time - Angle_minus11_Time) / (12*1000000));
-*/
-
-
 	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
-
-	MotorSpeed = constrain(PIDOutput, -MaxSpeed, MaxSpeed);
-
-//	if (Error_array_index < Error_array_len) {
-//		Error_array[Error_array_index][0] = Error;
-//		Error_array[Error_array_index][1] = AngleDerivative;
-//		Error_array_index += 1;
-//	}
-//	else if (Error_array_index < Error_array_len + 1) {
-//		Serial.println("Array full");
-//		Error_array_index += 1;
-//	}
 	
-	return MotorSpeed;
+	SendSpeed(PIDOutput);
 }
 
 void get_angle() {
@@ -327,16 +262,14 @@ void get_angle() {
 		Serial.println("Error: No data in MPU9255s buffer");
 	}
 
-	// Normalise accelerometer values in accordance with gravity, important as these values will be combined using 'atan2f' to increase the angles accuracy
-	//float AccelX = constrain((IMU.getAccelX_mss() - AccelxBias) * AccelxSF, -gravity, gravity) / gravity;
-	//float AccelZ = constrain((IMU.getAccelZ_mss() - AccelzBias) * AccelzSF, -gravity, gravity) / gravity;
-
 	// Decreased interval of constraint to only its working range (+/- 15 degrees from verticle) to help prevent effect of accelerometer spikes.
 	float AccelX = constrain((IMU.getAccelX_mss() - AccelxBias) * AccelxSF, 8.0, 10) / gravity;
 	float AccelZ = constrain((IMU.getAccelZ_mss() - AccelzBias) * AccelzSF, -5, 5) / gravity;
 
 	// Calculate (accel) angle in x-z plane using normalised x and z accelerometer values
 	float AccelAngle = atan2f(AccelZ, AccelX);
+
+	float AccelAngle = 
 
 	//Initalise time values for linear approx of gyro differentiation
 	Angle_0_Time = micros();
@@ -354,9 +287,9 @@ void get_angle() {
 		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
 		Angle_0 = Angle_0 + IMU.getGyroY_rads()*TimeDelta;
 		// Calculate angle using complamentary filter
-		Angle_0 = 0.998 * Angle_0 + (1-0.998) * AccelAngle;
+		Angle_0 = 0.995 * Angle_0 + (1-0.995) * AccelAngle;
 	}
-	float w = 0.85;
+	float w = 0.88;
 	Angle_0 = w * Angle_0 + (1 - w) * Angle_minus1;
 }
 

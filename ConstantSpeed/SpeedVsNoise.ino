@@ -59,22 +59,27 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
+	
 	if (Serial.available() > 0) {
 		switchByte = Serial.read();
 		Serial.println((char)switchByte);
 	}
-
+	delay(1);
+	Serial.print(micros());
+	Serial.print(' ');
+	Serial.println(analogRead(A0));
 	switch (switchByte)
 	{
 	case 'g':
 		get_angle();
-		Serial.print(speed, 16);
-		Serial.print(' ');
-		Serial.println(Angle, 16);
+		//Serial.print(speed, 16);
+		//Serial.print(' ');
+		//Serial.println(Angle, 16);
 
 		if ((millis() % 10 == 0))
 		{
-			speed = 0.3;
+			
+			speed = 0.5;
 			set_speed(speed);
 		}
 
@@ -84,7 +89,7 @@ void loop() {
 		set_speed(speed);
 		break;
 	case 'f':
-		set_speed(.5);
+		set_speed(-.5);
 		break;
 	default:
 		break;

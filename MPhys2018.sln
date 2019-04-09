@@ -15,6 +15,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpeedVsNoise", "ConstantSpe
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "I2CSniffer", "I2CSniffer\I2CSniffer.vcxproj", "{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CurrentControl", "CurrentControl\CurrentControl.vcxproj", "{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestSender", "TestSender\TestSender.vcxproj", "{68FA21C0-98D3-4153-92C0-07E06F44AB59}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -45,6 +49,14 @@ Global
 		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Debug|x86.Build.0 = Debug|Win32
 		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Release|x86.ActiveCfg = Release|Win32
 		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Release|x86.Build.0 = Release|Win32
+		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Debug|x86.ActiveCfg = Debug|Win32
+		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Debug|x86.Build.0 = Debug|Win32
+		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Release|x86.ActiveCfg = Release|Win32
+		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Release|x86.Build.0 = Release|Win32
+		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Debug|x86.ActiveCfg = Debug|Win32
+		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Debug|x86.Build.0 = Debug|Win32
+		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Release|x86.ActiveCfg = Release|Win32
+		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
