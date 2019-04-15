@@ -5,19 +5,7 @@ VisualStudioVersion = 15.0.28307.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPhys2018", "MPhys2018\MPhys2018.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bandwidthExample", "..\..\..\Documents\Arduino\My Examples\bandwidthExample\bandwidthExample.vcxproj", "{A9D076BA-119D-4836-92C4-AD1958BFA9C2}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "I2CScanner", "I2CScanner\I2CScanner.vcxproj", "{D12F12DC-883C-4751-9A91-A05EA742039E}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Advanced_I2C", "..\..\..\Documents\Arduino\My Examples\Advanced_I2C\Advanced_I2C.vcxproj", "{444910C9-EE09-4896-A114-91E0EC2421B5}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpeedVsNoise", "ConstantSpeed\ConstantSpeed.vcxproj", "{34102BFD-C8DA-49A3-A938-CC15ED2325C5}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "I2CSniffer", "I2CSniffer\I2CSniffer.vcxproj", "{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CurrentControl", "CurrentControl\CurrentControl.vcxproj", "{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestSender", "TestSender\TestSender.vcxproj", "{68FA21C0-98D3-4153-92C0-07E06F44AB59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,34 +17,10 @@ Global
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.Build.0 = Debug|Win32
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.ActiveCfg = Release|Win32
 		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.Build.0 = Release|Win32
-		{A9D076BA-119D-4836-92C4-AD1958BFA9C2}.Debug|x86.ActiveCfg = Debug|Win32
-		{A9D076BA-119D-4836-92C4-AD1958BFA9C2}.Debug|x86.Build.0 = Debug|Win32
-		{A9D076BA-119D-4836-92C4-AD1958BFA9C2}.Release|x86.ActiveCfg = Release|Win32
-		{A9D076BA-119D-4836-92C4-AD1958BFA9C2}.Release|x86.Build.0 = Release|Win32
-		{D12F12DC-883C-4751-9A91-A05EA742039E}.Debug|x86.ActiveCfg = Debug|Win32
-		{D12F12DC-883C-4751-9A91-A05EA742039E}.Debug|x86.Build.0 = Debug|Win32
-		{D12F12DC-883C-4751-9A91-A05EA742039E}.Release|x86.ActiveCfg = Release|Win32
-		{D12F12DC-883C-4751-9A91-A05EA742039E}.Release|x86.Build.0 = Release|Win32
-		{444910C9-EE09-4896-A114-91E0EC2421B5}.Debug|x86.ActiveCfg = Debug|Win32
-		{444910C9-EE09-4896-A114-91E0EC2421B5}.Debug|x86.Build.0 = Debug|Win32
-		{444910C9-EE09-4896-A114-91E0EC2421B5}.Release|x86.ActiveCfg = Release|Win32
-		{444910C9-EE09-4896-A114-91E0EC2421B5}.Release|x86.Build.0 = Release|Win32
-		{34102BFD-C8DA-49A3-A938-CC15ED2325C5}.Debug|x86.ActiveCfg = Debug|Win32
-		{34102BFD-C8DA-49A3-A938-CC15ED2325C5}.Debug|x86.Build.0 = Debug|Win32
-		{34102BFD-C8DA-49A3-A938-CC15ED2325C5}.Release|x86.ActiveCfg = Release|Win32
-		{34102BFD-C8DA-49A3-A938-CC15ED2325C5}.Release|x86.Build.0 = Release|Win32
-		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Debug|x86.ActiveCfg = Debug|Win32
-		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Debug|x86.Build.0 = Debug|Win32
-		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Release|x86.ActiveCfg = Release|Win32
-		{ABC10EC6-CAD2-4660-A766-D5DF42D2DE05}.Release|x86.Build.0 = Release|Win32
 		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Debug|x86.ActiveCfg = Debug|Win32
 		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Debug|x86.Build.0 = Debug|Win32
 		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Release|x86.ActiveCfg = Release|Win32
 		{90FAD8EE-912A-4E3A-9413-09E4C8AF104C}.Release|x86.Build.0 = Release|Win32
-		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Debug|x86.ActiveCfg = Debug|Win32
-		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Debug|x86.Build.0 = Debug|Win32
-		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Release|x86.ActiveCfg = Release|Win32
-		{68FA21C0-98D3-4153-92C0-07E06F44AB59}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

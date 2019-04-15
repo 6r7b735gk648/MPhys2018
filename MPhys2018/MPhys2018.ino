@@ -1,15 +1,39 @@
 #include <math.h>
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 #include <MPU9250.h>
-
-// An MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
 
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+	#include "Wire.h"
+#endif
 
-//PID controller gains					// Last stable value set
-#define Gain_Proportional	700000		// 600000.0
-#define  Gain_Integral		74000		// 64000.0 
-#define  Gain_Derivative	50000		//40000.0 
-#define  Gain_Rotor_Speed	-.001		//-.001
+MPU6050 mpu;
+
+#define INTERRUPT_PIN 2
+
+// MPU control/status vars
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+// orientation/motion vars
+Quaternion q;           // [w, x, y, z]         quaternion container
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity;    // [x, y, z]            gravity vector
+float euler[3];         // [psi, theta, phi]    Euler angle container
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+
+//PID controller gains					
+#define Gain_Proportional	700000		
+#define  Gain_Integral		0		
+#define  Gain_Derivative	40000
+#define  Gain_Rotor_Speed	-.00	
 
 float PIDOutput = 0;
 
@@ -51,6 +75,13 @@ float AngleDerivative = 0;
 #define AccelzSF 0.991977013
 #define gravity 9.8071495
 
+
+volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+void dmpDataReady() {
+	mpuInterrupt = true;
+}
+
+
 // The setup function runs once when you press reset or power the board
 void setup() {
 	Wire.begin();
@@ -62,58 +93,65 @@ void setup() {
 		Serial.println("Waiting for serial, how can this be?");
 	}
 
-	// Start communication with MPU9255
-	int status;
-	status = IMU.begin();
-	if (status < 0) {
-		Serial.println("IMU initialization unsuccessful");
-		Serial.print("Error Status: ");
-		Serial.println(status);
-		while (1) {}
-	}
+	// join I2C bus (I2Cdev library doesn't do this automatically)
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+	Wire.begin();
+	Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+	Fastwire::setup(400, true);
+#endif
 	
-	// Calibrate the gyro (Sensor must be stationary for accuracy)
-	status = IMU.calibrateGyro();
-	if (status < 0) {
-		Serial.println("Gyro calibration unsuccessful");
-		Serial.print("Error Status: ");
-		Serial.println(status);
-		while (1) {}
+	Serial.println(F("Initializing I2C devices..."));
+	mpu.initialize();
+	pinMode(INTERRUPT_PIN, INPUT);
+
+	Serial.println(F("Initializing DMP..."));
+	devStatus = mpu.dmpInitialize();
+
+	//[007999, 008000] -- > [-00169, 000000][007999, 008000] -- > [-00191, 000000][-08000, -08000] -- > [000000, 017731][000161, 000162] -- > [000000, 000003][-00063, -00062] -- > [-00376, 000111][-00126, -00125] -- > [-00191, 000046]
+
+	// supply your own gyro offsets here, scaled for min sensitivity
+	mpu.setXGyroOffset(161);
+	mpu.setYGyroOffset(-63);
+	mpu.setZGyroOffset(-13);
+	//mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+
+	if (devStatus == 0) {
+		// turn on the DMP, now that it's ready
+		Serial.println(F("Enabling DMP..."));
+		mpu.setDMPEnabled(true);
+
+		// enable Arduino interrupt detection
+		Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
+		Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
+		Serial.println(F(")..."));
+		attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
+		mpuIntStatus = mpu.getIntStatus();
+
+		// set our DMP Ready flag so the main loop() function knows it's okay to use it
+		Serial.println(F("DMP ready! Waiting for first interrupt..."));
+		dmpReady = true;
+
+		// get expected DMP packet size for later comparison
+		packetSize = mpu.dmpGetFIFOPacketSize();
+	}
+	else {
+		// ERROR!
+		// 1 = initial memory load failed
+		// 2 = DMP configuration updates failed
+		// (if it's going to break, usually the code will be 1)
+		Serial.print(F("DMP Initialization failed (code "));
+		Serial.print(devStatus);
+		Serial.println(F(")"));
 	}
 
-	// Set full scale range of accelerometer to [-2,2] g 
-	status = IMU.setAccelRange(MPU9250::ACCEL_RANGE_2G);
-	if (status < 0) {
-		Serial.println("Gyro calibration unsuccessful");
-		Serial.print("Error Status: ");
-		Serial.println(status);
-		while (1) {}
-	}
-
-	// Set full scale range of gyroscope to [-500,500] deg/s
-	status = IMU.setGyroRange(MPU9250::GYRO_RANGE_250DPS);
-	if (status < 0) {
-		Serial.println("Set gyroscope range unsuccessful");
-		Serial.print("Error Status: ");
-		Serial.println(status);
-		while (1) {}
-	}
-
-	// Set Digital Low Pass Filter (DLPF) bandwidth to 184 Hz
-	//status = IMU.setDlpfBandwidth(MPU9250::DLPF_BANDWIDTH_MaxHZ);
-	status = IMU.setDlpfBandwidth(MPU9250::DLPF_BANDWIDTH_20HZ);
-	if (status < 0) {
-		Serial.println("Set digital low pass filter unsuccessful");
-		Serial.print("Error Status: ");
-		Serial.println(status);
-		while (1) {}
-	}
 	Serial.println("Set up successful");
 }
 
 // The loop function runs repeatedly until power down or reset
 void loop() {
-	//long StartTime = micros();
+	get_angle();
+
 	if (Serial.available() > 0) {
 		switchByte = Serial.read();
 		switch (switchByte)
@@ -121,10 +159,18 @@ void loop() {
 		case 'r':
 			Serial.println("Reading angle data (running get_angle)");
 			break;
+
 		case 'c':
 			Serial.println("Calibrating setpoint...");
 			break;
+
 		case 'g':
+			AngleProportional = 0;
+			AngleIntegral = 0;
+			AngleDerivative = 0;
+			Serial.println(SetPointAngle);
+			Serial.println("PID values cleared");
+			Serial.println("Running PID stabilisation...");
 			break;
 
 		case 's':
@@ -139,49 +185,30 @@ void loop() {
 	switch (switchByte) 
 	{
 	case 'r':
-		get_angle();
+		Serial.println(Angle_0,5);
 		break;
 
 	case 'c':
-		get_angle();
-		if (micros() > Angle_minus1_Time + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
-		{
-			SetPointAngle = Angle_0;
-		}
+		SetPointAngle = Angle_0;
 		break;
 
 	case 'g':
-		AngleProportional = 0;
-		AngleIntegral = 0;
-		AngleDerivative = 0;
-		switchByte = 'q';
-		Serial.println("PID values cleared");
-		Serial.println("Running PID stabilisation...");
-		break;
-
-	case 'q':
-		if (micros() > Angle_minus1_Time + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
-		{
-			pid_controller();
-		}
+		pid_controller();
 		break;
 
 	case 's':
 		SendSpeed(0);	
-		get_angle();
 		break;
 
 	default:
-
 		SendSpeed(0);
-		get_angle();
 		break;
 	}
 }
 
 void SendSpeed(float Speed) {
 	byte myArray[2];
-	int16_t SetPoint = constrain(Speed, int16_tMin, int16_tMax); //-32, 768 .. 32, 767
+	int16_t SetPoint = constrain(Speed, int16_tMin+1, int16_tMax-1); //-32, 768 .. 32, 767
 	myArray[0] = (SetPoint >> 8) & 0xFF;
 	myArray[1] = SetPoint & 0xFF;
 
@@ -191,13 +218,11 @@ void SendSpeed(float Speed) {
 }
 
 void pid_controller() {
-	get_angle();
-	
 	float Error = Angle_0 - SetPointAngle;
 
 	//Stops motor if device becomes unstable and falls over: (+-) 0.174533 rad = 10 degrees
 	if (abs(Error) >= 0.174533) {
-		Serial.println("Error: Angle out of bounds");
+		Serial.print("Error: Angle out of bounds ");
 		switchByte = 's';
 	}
 
@@ -205,91 +230,121 @@ void pid_controller() {
 	
 	AngleIntegral =	AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
 
-	AngleDerivative =	Gain_Derivative *	(((Angle_0 - SetPointAngle) - (Angle_minus1 - SetPointAngle))	/ ((Angle_0_Time - Angle_minus1_Time)/1000000)* (.27473) +
-											 ((Angle_minus1 - SetPointAngle) - (Angle_minus2 - SetPointAngle)) / ((Angle_minus1_Time - Angle_minus2_Time) / 1000000) * (.24176) +
-											 ((Angle_minus2 - SetPointAngle) - (Angle_minus3 - SetPointAngle)) / ((Angle_minus2_Time - Angle_minus3_Time) / 1000000) * (.20879) +
-											 ((Angle_minus3 - SetPointAngle) - (Angle_minus4 - SetPointAngle)) / ((Angle_minus3_Time - Angle_minus4_Time) / 1000000) * (.17582) +
-											 ((Angle_minus4 - SetPointAngle) - (Angle_minus5 - SetPointAngle)) / ((Angle_minus4_Time - Angle_minus5_Time) / 1000000) * (.14286) +
-											 ((Angle_minus5 - SetPointAngle) - (Angle_minus6 - SetPointAngle)) / ((Angle_minus5_Time - Angle_minus6_Time) / 1000000) * (.10989) +
-											 ((Angle_minus6 - SetPointAngle) - (Angle_minus7 - SetPointAngle)) / ((Angle_minus6_Time - Angle_minus7_Time) / 1000000) * (.07692) +
-											 ((Angle_minus7 - SetPointAngle) - (Angle_minus8 - SetPointAngle)) / ((Angle_minus7_Time - Angle_minus8_Time) / 1000000) * (.04396) +
-											 ((Angle_minus8 - SetPointAngle) - (Angle_minus9 - SetPointAngle)) / ((Angle_minus8_Time - Angle_minus9_Time) / 1000000) * (.01099) +
-											 ((Angle_minus9 - SetPointAngle) - (Angle_minus10 - SetPointAngle)) / ((Angle_minus9_Time - Angle_minus10_Time) / 1000000) * (-.02198) +
-											 ((Angle_minus10 - SetPointAngle) - (Angle_minus11 - SetPointAngle)) / ((Angle_minus10_Time - Angle_minus11_Time) / 1000000) * (-.05495) +
-											 ((Angle_minus11 - SetPointAngle) - (Angle_minus12 - SetPointAngle)) / ((Angle_minus11_Time - Angle_minus12_Time) / 1000000) * (-.08791) +
-											 ((Angle_minus12 - SetPointAngle) - (Angle_minus13 - SetPointAngle)) / ((Angle_minus12_Time - Angle_minus13_Time) / 1000000) * (-.12088));
+
+	AngleDerivative = Gain_Derivative * (Angle_0 		* (.08333) +
+										Angle_minus1	* (.05952) +
+										Angle_minus2	* (.03571) +
+										Angle_minus3	* (.01190) +
+										Angle_minus4	* (-.01190) +
+										Angle_minus5	* (-.03571) +
+										Angle_minus6	* (-.05952) +
+										Angle_minus7	* (-.08333)) / ((Angle_0_Time - Angle_minus7_Time)/(1000000*7));
+
+	SetPointAngle = SetPointAngle - 0.001 * Error;
 
 
-	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
+	if (PIDOutput > 0) {
+		PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput + 100;
+	}
+	else {
+		PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput - 100;
+	}
+
 	
+	
+
+
+	Serial.print(micros());
+	Serial.print(',');
+	Serial.print(SetPointAngle,4);
+	Serial.print(',');
+	Serial.println(Angle_0,4);
 	SendSpeed(PIDOutput);
 }
 
 void get_angle() {
-	// Set previous angle and time to be current angle time, before calculating new values
-	Angle_minus13 = Angle_minus12;
-	Angle_minus13_Time = Angle_minus12_Time;
-	Angle_minus12 = Angle_minus11;
-	Angle_minus12_Time = Angle_minus11_Time;
-	Angle_minus11 = Angle_minus10;
-	Angle_minus11_Time = Angle_minus10_Time;
-	Angle_minus10 = Angle_minus9;
-	Angle_minus10_Time = Angle_minus9_Time;
-	Angle_minus9 = Angle_minus8;
-	Angle_minus9_Time = Angle_minus8_Time;
-	Angle_minus8 = Angle_minus7;
-	Angle_minus8_Time = Angle_minus7_Time;
-	Angle_minus7 = Angle_minus6;
-	Angle_minus7_Time = Angle_minus6_Time;
-	Angle_minus6 = Angle_minus5;
-	Angle_minus6_Time = Angle_minus5_Time;
-	Angle_minus5 = Angle_minus4;
-	Angle_minus5_Time = Angle_minus4_Time;
-	Angle_minus4 = Angle_minus3;
-	Angle_minus4_Time = Angle_minus3_Time;
-	Angle_minus4 = Angle_minus3;
-	Angle_minus4_Time = Angle_minus3_Time;
-	Angle_minus3 = Angle_minus2;
-	Angle_minus3_Time = Angle_minus2_Time;
-	Angle_minus2 = Angle_minus1;
-	Angle_minus2_Time = Angle_minus1_Time;
-	Angle_minus1 = Angle_0;
-	Angle_minus1_Time = Angle_0_Time;
+	// wait for MPU interrupt or extra packet(s) available
+	while (!mpuInterrupt && fifoCount < packetSize) {
+		if (mpuInterrupt && fifoCount < packetSize) {
+			// try to get out of the infinite loop 
+			fifoCount = mpu.getFIFOCount();
+		}
+		// Other intermediate code can go here 
+	}
+
+	// reset interrupt flag and get INT_STATUS byte
+	mpuInterrupt = false;
+	mpuIntStatus = mpu.getIntStatus();
+
+	// get current FIFO count
+	fifoCount = mpu.getFIFOCount();
+
+	// check for overflow (this should never happen unless our code is too inefficient)
+	if ((mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
+		// reset so we can continue cleanly
+		mpu.resetFIFO();
+		fifoCount = mpu.getFIFOCount();
+		Serial.println(F("FIFO overflow!"));
+
+		// otherwise, check for DMP data ready interrupt (this should happen frequently)
+	}
+	else if (mpuIntStatus & _BV(MPU6050_INTERRUPT_DMP_INT_BIT)) {
+		// wait for correct available data length, should be a VERY short wait
+		while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+
+		// read a packet from FIFO
+		mpu.getFIFOBytes(fifoBuffer, packetSize);
+
+		// track FIFO count here in case there is > 1 packet available
+		// (this lets us immediately read more without waiting for an interrupt)
+		fifoCount -= packetSize;
+
+		// Set previous angle and time to be current angle time, before calculating new values
+		Angle_minus13 = Angle_minus12;
+		Angle_minus13_Time = Angle_minus12_Time;
+		Angle_minus12 = Angle_minus11;
+		Angle_minus12_Time = Angle_minus11_Time;
+		Angle_minus11 = Angle_minus10;
+		Angle_minus11_Time = Angle_minus10_Time;
+		Angle_minus10 = Angle_minus9;
+		Angle_minus10_Time = Angle_minus9_Time;
+		Angle_minus9 = Angle_minus8;
+		Angle_minus9_Time = Angle_minus8_Time;
+		Angle_minus8 = Angle_minus7;
+		Angle_minus8_Time = Angle_minus7_Time;
+		Angle_minus7 = Angle_minus6;
+		Angle_minus7_Time = Angle_minus6_Time;
+		Angle_minus6 = Angle_minus5;
+		Angle_minus6_Time = Angle_minus5_Time;
+		Angle_minus5 = Angle_minus4;
+		Angle_minus5_Time = Angle_minus4_Time;
+		Angle_minus4 = Angle_minus3;
+		Angle_minus4_Time = Angle_minus3_Time;
+		Angle_minus4 = Angle_minus3;
+		Angle_minus4_Time = Angle_minus3_Time;
+		Angle_minus3 = Angle_minus2;
+		Angle_minus3_Time = Angle_minus2_Time;
+		Angle_minus2 = Angle_minus1;
+		Angle_minus2_Time = Angle_minus1_Time;
+		Angle_minus1 = Angle_0;
+		Angle_minus1_Time = Angle_0_Time;
+
+		// Get Euler angles in radians
+		Angle_0_Time = micros();
+		mpu.dmpGetQuaternion(&q, fifoBuffer);
+		mpu.dmpGetEuler(euler, &q);
+		
+		Angle_0 = -euler[2];
+		
+		float W_a = 0.99;
+		
+		Angle_0 = W_a * Angle_0 + (1 - W_a) * Angle_minus1;
+
+		
+		
+	}
+
+}
 	
 
-	// Read the MPU9250 sensor
-	if (IMU.readSensor() < 0) {
-		Serial.println("Error: No data in MPU9255s buffer");
-	}
-
-	// Decreased interval of constraint to only its working range (+/- 15 degrees from verticle) to help prevent effect of accelerometer spikes.
-	float AccelX = constrain((IMU.getAccelX_mss() - AccelxBias) * AccelxSF, 8.0, 10) / gravity;
-	float AccelZ = constrain((IMU.getAccelZ_mss() - AccelzBias) * AccelzSF, -5, 5) / gravity;
-
-	// Calculate (accel) angle in x-z plane using normalised x and z accelerometer values
-	float AccelAngle = atan2f(AccelZ, AccelX);
-
-	float AccelAngle = 
-
-	//Initalise time values for linear approx of gyro differentiation
-	Angle_0_Time = micros();
-	float TimeDelta = (Angle_0_Time - Angle_minus1_Time) / 1000000;
-
-	// If time since get_angle was last ran is greater than 0.2 seconds, do not us gyro data as time interval too great for approxmation of gyro integration
-	if (TimeDelta > 0.2) {
-		// Set angle to Accelerometer angle
-		if (Angle_0 != 0) {
-			Serial.println("Error: Gyroscopic data timeout");
-		}
-		Angle_0 = AccelAngle;
-	}
-	else {
-		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
-		Angle_0 = Angle_0 + IMU.getGyroY_rads()*TimeDelta;
-		// Calculate angle using complamentary filter
-		Angle_0 = 0.995 * Angle_0 + (1-0.995) * AccelAngle;
-	}
-	float w = 0.88;
-	Angle_0 = w * Angle_0 + (1 - w) * Angle_minus1;
-}
 

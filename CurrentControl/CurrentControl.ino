@@ -16,8 +16,7 @@ float Speed = 0;
 float Current = 0;
 float Error = 0;
 
-
-float SetPoint = 0; //-327.68 .. 327.67
+float SetPoint = 0; 
 
 #define SetPointSF 0.015
 
@@ -52,14 +51,14 @@ void loop() {
 	Error = abs(SetPoint) - Current;
 
 	// Condition such that low RPMs don't bind the motor, this is specific to the reaction wheel pendulums stability.
-	if (SetPoint< 1 && SetPoint>-1) {
-		//Condition such that when a true zero signal is recieve, the motor actually stops being powered i.e. a stop signal
-		if (SetPoint == 0.0) {
-			PWMOutput = 0.0;
-		}
-	}
+//	if (SetPoint< 1 && SetPoint>-1) {
+//		//Condition such that when a true zero signal is recieve, the motor actually stops being powered i.e. a stop signal
+//		if (SetPoint == 0.0) {
+//			PWMOutput = 0.0;
+//		}
+//	}
 	// Else run the PI feedback loop.
-	else {
+//	else {
 	if (PWMOutput < 1.0 && PWMOutput >= 0.0) {
 		SignalIntegral += IntegralGain * Error;
 	}
@@ -74,9 +73,10 @@ void loop() {
 
 	SignalProportional = ProportionalGain * Error;
 	PWMOutput = (SignalIntegral + SignalProportional);
-	}
+//	}
 
 	Speed = constrain(PWMOutput, 0, 1);
+
 
 	//Sign of Speed value is converted to direction of motor 
 	if (SetPoint < 0) {
@@ -89,7 +89,7 @@ void loop() {
 		digitalWrite(BPin, LOW);
 		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
-	Current = max(analogRead(CS) - 3.0,0.0);
+	Current = max(analogRead(CS)-3.0,0.0);
 
 	//Serial.print(SetPoint, 4);
 	//Serial.print(',');
