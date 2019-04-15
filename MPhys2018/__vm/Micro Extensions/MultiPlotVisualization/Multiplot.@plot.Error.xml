@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PlotSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <CurveSettingCollection>
+    <CurveSettings>
+      <CurveId>Error</CurveId>
+      <CurveDisplayName>Error</CurveDisplayName>
+      <CurveLineTicks>XCross</CurveLineTicks>
+      <CurveColor>Maroon</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+    <CurveSettings>
+      <CurveId>Derivative</CurveId>
+      <CurveDisplayName>Derivative</CurveDisplayName>
+      <CurveLineTicks>XCross</CurveLineTicks>
+      <CurveColor>Turquoise</CurveColor>
+      <ChartAssignment2>0</ChartAssignment2>
+    </CurveSettings>
+  </CurveSettingCollection>
+  <XSweepTime>20 sec</XSweepTime>
+  <XTimeFormat>Auto</XTimeFormat>
+  <DisplayRefreshRate>AsDataComesIn</DisplayRefreshRate>
+  <ChartType>LineChart</ChartType>
+  <OptimizeBinaryCurves>On</OptimizeBinaryCurves>
+  <CurveDistribution>SingeChart</CurveDistribution>
+  <TriggerEnabled>false</TriggerEnabled>
+  <TriggerCondition>None</TriggerCondition>
+  <TriggerMode>Continuous</TriggerMode>
+  <LineWidths2>Thin</LineWidths2>
+</PlotSettings>
