@@ -6,7 +6,7 @@ MPU9250 IMU(Wire, 0x68);
 
 
 //PID controller gains					// Last stable value set
-#define Gain_Proportional	700000		// 600000.0
+#define Gain_Proportional	600000		// 600000.0
 #define  Gain_Integral		74000		// 64000.0 
 #define  Gain_Derivative	50000		//40000.0 
 #define  Gain_Rotor_Speed	-.001		//-.001
@@ -205,6 +205,7 @@ void pid_controller() {
 	
 	AngleIntegral =	AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
 
+	/*
 	AngleDerivative =	Gain_Derivative *	(((Angle_0 - SetPointAngle) - (Angle_minus1 - SetPointAngle))	/ ((Angle_0_Time - Angle_minus1_Time)/1000000)* (.27473) +
 											 ((Angle_minus1 - SetPointAngle) - (Angle_minus2 - SetPointAngle)) / ((Angle_minus1_Time - Angle_minus2_Time) / 1000000) * (.24176) +
 											 ((Angle_minus2 - SetPointAngle) - (Angle_minus3 - SetPointAngle)) / ((Angle_minus2_Time - Angle_minus3_Time) / 1000000) * (.20879) +
@@ -218,6 +219,18 @@ void pid_controller() {
 											 ((Angle_minus10 - SetPointAngle) - (Angle_minus11 - SetPointAngle)) / ((Angle_minus10_Time - Angle_minus11_Time) / 1000000) * (-.05495) +
 											 ((Angle_minus11 - SetPointAngle) - (Angle_minus12 - SetPointAngle)) / ((Angle_minus11_Time - Angle_minus12_Time) / 1000000) * (-.08791) +
 											 ((Angle_minus12 - SetPointAngle) - (Angle_minus13 - SetPointAngle)) / ((Angle_minus12_Time - Angle_minus13_Time) / 1000000) * (-.12088));
+	*/
+	
+	
+	
+	AngleDerivative = Gain_Derivative * (Angle_0 		* (.08333) +
+										Angle_minus1	* (.05952) +
+										Angle_minus2	* (.03571) +
+										Angle_minus3	* (.01190) +
+										Angle_minus4	* (-.01190) +
+										Angle_minus5	* (-.03571) +
+										Angle_minus6	* (-.05952) +
+										Angle_minus7	* (-.08333)) / ((Angle_0_Time - Angle_minus7_Time) / (1000000 * 7));
 
 
 	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
@@ -269,8 +282,6 @@ void get_angle() {
 	// Calculate (accel) angle in x-z plane using normalised x and z accelerometer values
 	float AccelAngle = atan2f(AccelZ, AccelX);
 
-	float AccelAngle = 
-
 	//Initalise time values for linear approx of gyro differentiation
 	Angle_0_Time = micros();
 	float TimeDelta = (Angle_0_Time - Angle_minus1_Time) / 1000000;
@@ -287,7 +298,7 @@ void get_angle() {
 		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
 		Angle_0 = Angle_0 + IMU.getGyroY_rads()*TimeDelta;
 		// Calculate angle using complamentary filter
-		Angle_0 = 0.995 * Angle_0 + (1-0.995) * AccelAngle;
+		Angle_0 = 0.999 * Angle_0 + (1-0.999) * AccelAngle;
 	}
 	float w = 0.88;
 	Angle_0 = w * Angle_0 + (1 - w) * Angle_minus1;

@@ -9,11 +9,23 @@
 
 float SignalProportional = 0.0;
 float SignalIntegral = 0.0;
+float SignalDerivative = 0.0;
 
 float PWMOutput = 0;
 float Speed = 0;
 
+long Current_Time = 0;
+long Currentm1_Time = 0;
+
 float Current = 0;
+float Currentm1 = 0;
+float Currentm2 = 0;
+float Currentm3 = 0;
+float Currentm4 = 0;
+float Currentm5 = 0;
+float Currentm6 = 0;
+float Currentm7 = 0;
+
 float Error = 0;
 
 
@@ -21,8 +33,9 @@ float SetPoint = 0; //-327.68 .. 327.67
 
 #define SetPointSF 0.015
 
-#define IntegralGain 0.0001
-#define ProportionalGain 0.001 
+#define ProportionalGain 0.008
+#define IntegralGain 0.0002
+#define DerivativeGain 0.018
 
 // The setup function runs once when you press reset or power the board
 void setup() {
@@ -73,7 +86,17 @@ void loop() {
 	//}
 
 	SignalProportional = ProportionalGain * Error;
-	PWMOutput = (SignalIntegral + SignalProportional);
+
+	SignalDerivative = DerivativeGain * (Current	* (.08333) +
+										Currentm1	* (.05952) +
+										Currentm2	* (.03571) +
+										Currentm3	* (.01190) +
+										Currentm4	* (-.01190) +
+										Currentm5	* (-.03571) +
+										Currentm6	* (-.05952) +
+										Currentm7	* (-.08333)) / (Current_Time - Currentm1_Time);
+
+	PWMOutput = (SignalIntegral + SignalProportional + SignalDerivative);
 	}
 
 	Speed = constrain(PWMOutput, 0, 1);
@@ -89,11 +112,23 @@ void loop() {
 		digitalWrite(BPin, LOW);
 		analogWrite(pwmPin, int(abs(Speed) * 255));
 	}
-	Current = max(analogRead(CS) - 3.0,0.0);
+	Currentm7 = Currentm6;
+	Currentm6 = Currentm5;
+	Currentm5 = Currentm4;
+	Currentm4 = Currentm3;
+	Currentm3 = Currentm2;
+	Currentm2 = Currentm1;
+	Currentm1 = Current;
+	Currentm1_Time = Current_Time;
 
-	//Serial.print(SetPoint, 4);
+	float w = 0.6;
+	Current = w * analogRead(CS) + (1-w) * Currentm1;
+
+	Current_Time = micros();
+	
+	//Serial.print(Current_Time);
 	//Serial.print(',');
-	//Serial.print(PWMOutput, 4);
+	//Serial.print(SetPoint*(5.0 / 1024.0) / 0.13, 4);
 	//Serial.print(',');
-	//Serial.println(Current);
+	//Serial.println(Current*(5.0/1024.0)/0.13, 4);
 }
