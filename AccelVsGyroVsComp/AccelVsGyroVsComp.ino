@@ -179,12 +179,17 @@ void get_angle() {
 		}
 		Angle_0 = AccelAngle;
 	}
-	else {
+	else if (AccelAngle > Angle_0 - 0.1 && AccelAngle < Angle_0 + 0.1) {
 		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
 		GyroAngle += IMU.getGyroY_rads()*TimeDelta;
 		Angle_0 = Angle_0 + IMU.getGyroY_rads()*TimeDelta;
 		// Calculate angle using complamentary filter
 		Angle_0 = 0.999 * Angle_0 + (1 - 0.999) * AccelAngle;
+	}
+	else {
+		// Calculate gyro angle by integrating (multiplying by timesince last measurment) and adding it to the previous angle measurement
+		GyroAngle += IMU.getGyroY_rads()*TimeDelta;
+		Angle_0 = Angle_0 + IMU.getGyroY_rads()*TimeDelta;
 	}
 	float w = 1;
 	Angle_0 = w * Angle_0 + (1 - w) * Angle_minus1;

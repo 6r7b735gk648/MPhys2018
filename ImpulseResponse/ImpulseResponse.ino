@@ -6,10 +6,10 @@ MPU9250 IMU(Wire, 0x68);
 
 
 //PID controller gains					// Last stable value set
-#define Gain_Proportional	630000		//900000		//800000		// 600000.0
-#define  Gain_Integral		1614285			//120000		//74000		// 64000.0 
-#define  Gain_Derivative	157149			//50000		//50000		//40000.0 
-#define  Gain_Rotor_Speed	-0.001			//-0.001	//-.001		//-.001
+#define Gain_Proportional	600000		//900000		//800000		// 600000.0
+#define  Gain_Integral		1714285			//120000		//74000		// 64000.0 
+#define  Gain_Derivative	107149			//50000		//50000		//40000.0 
+#define  Gain_Rotor_Speed	0			//-0.001	//-.001		//-.001
 
 float PIDOutput = 0;
 
@@ -18,20 +18,20 @@ char switchByte;
 
 
 // 'Current' angle value in X-Z plane
-float Angle_0 = 0,			Angle_0_Time = 0;
-float Angle_minus1 = 0,		Angle_minus1_Time = 0;
-float Angle_minus2 = 0,		Angle_minus2_Time = 0;
-float Angle_minus3 = 0,		Angle_minus3_Time = 0;
-float Angle_minus4 = 0,		Angle_minus4_Time = 0;
-float Angle_minus5 = 0,		Angle_minus5_Time = 0;
-float Angle_minus6 = 0,		Angle_minus6_Time = 0;
-float Angle_minus7 = 0,		Angle_minus7_Time = 0;
-float Angle_minus8 = 0,		Angle_minus8_Time = 0;
-float Angle_minus9 = 0,		Angle_minus9_Time = 0;
-float Angle_minus10 = 0,	Angle_minus10_Time = 0;
-float Angle_minus11 = 0,	Angle_minus11_Time = 0;
-float Angle_minus12 = 0,	Angle_minus12_Time = 0;
-float Angle_minus13 = 0,	Angle_minus13_Time = 0;
+float Angle_0 = 0, Angle_0_Time = 0;
+float Angle_minus1 = 0, Angle_minus1_Time = 0;
+float Angle_minus2 = 0, Angle_minus2_Time = 0;
+float Angle_minus3 = 0, Angle_minus3_Time = 0;
+float Angle_minus4 = 0, Angle_minus4_Time = 0;
+float Angle_minus5 = 0, Angle_minus5_Time = 0;
+float Angle_minus6 = 0, Angle_minus6_Time = 0;
+float Angle_minus7 = 0, Angle_minus7_Time = 0;
+float Angle_minus8 = 0, Angle_minus8_Time = 0;
+float Angle_minus9 = 0, Angle_minus9_Time = 0;
+float Angle_minus10 = 0, Angle_minus10_Time = 0;
+float Angle_minus11 = 0, Angle_minus11_Time = 0;
+float Angle_minus12 = 0, Angle_minus12_Time = 0;
+float Angle_minus13 = 0, Angle_minus13_Time = 0;
 
 
 #define int16_tMin -32768
@@ -50,6 +50,9 @@ float AngleDerivative = 0;
 #define AccelzBias -0.635659927
 #define AccelzSF 0.991977013
 #define gravity 9.8071495
+
+int Impulse = 0;
+long ImpulseTime = 0;
 
 // The setup function runs once when you press reset or power the board
 void setup() {
@@ -71,7 +74,7 @@ void setup() {
 		Serial.println(status);
 		while (1) {}
 	}
-	
+
 	// Calibrate the gyro (Sensor must be stationary for accuracy)
 	status = IMU.calibrateGyro();
 	if (status < 0) {
@@ -125,8 +128,12 @@ void loop() {
 			Serial.println("Calibrating setpoint...");
 			break;
 		case 'g':
+			AngleProportional = 0;
+			AngleIntegral = 0;
+			AngleDerivative = 0;
+			Serial.println("PID values cleared");
+			Serial.println("Running PID stabilisation...");
 			break;
-
 		case 's':
 			Serial.println("STOP!");
 			break;
@@ -136,7 +143,7 @@ void loop() {
 		}
 	}
 
-	switch (switchByte) 
+	switch (switchByte)
 	{
 	case 'r':
 		get_angle();
@@ -152,23 +159,20 @@ void loop() {
 		break;
 
 	case 'g':
-		AngleProportional = 0;
-		AngleIntegral = 0;
-		AngleDerivative = 0;
-		switchByte = 'q';
-		Serial.println("PID values cleared");
-		Serial.println("Running PID stabilisation...");
-		break;
-
-	case 'q':
-		if (micros() > Angle_minus1_Time + 1000) // Date sample rate of 1000Hz (over 2x DLPF for both accel and gyro) gives 1000 microseconds between each loop.
-		{
-			pid_controller();
+		if (micros() > ImpulseTime + 100000) {
+			Impulse = 0;
 		}
-		break;
 
+		pid_controller();
+		break;
+	case 'i':
+		Serial.println("Impulse");
+		Impulse = 10000;
+		ImpulseTime = micros();
+		switchByte = 'g';
+		break;
 	case 's':
-		SendSpeed(0);	
+		SendSpeed(0);
 		get_angle();
 		break;
 
@@ -193,7 +197,7 @@ void SendSpeed(float Speed) {
 
 void pid_controller() {
 	get_angle();
-	
+
 	float Error = Angle_0 - SetPointAngle;
 
 	//Stops motor if device becomes unstable and falls over: (+-) 0.174533 rad = 10 degrees
@@ -203,8 +207,8 @@ void pid_controller() {
 	}
 
 	AngleProportional = Gain_Proportional * Error;
-	
-	AngleIntegral =	AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
+
+	AngleIntegral = AngleIntegral + Gain_Integral * Error * (Angle_0_Time - Angle_minus1_Time) / 1000000;
 
 	/*
 	AngleDerivative =	Gain_Derivative *	(((Angle_0 - SetPointAngle) - (Angle_minus1 - SetPointAngle))	/ ((Angle_0_Time - Angle_minus1_Time)/1000000)* (.27473) +
@@ -221,27 +225,27 @@ void pid_controller() {
 											 ((Angle_minus11 - SetPointAngle) - (Angle_minus12 - SetPointAngle)) / ((Angle_minus11_Time - Angle_minus12_Time) / 1000000) * (-.08791) +
 											 ((Angle_minus12 - SetPointAngle) - (Angle_minus13 - SetPointAngle)) / ((Angle_minus12_Time - Angle_minus13_Time) / 1000000) * (-.12088));
 	*/
-	
-	
-	
-	AngleDerivative = Gain_Derivative * (Angle_0 		* (.08333) +
-										Angle_minus1	* (.05952) +
-										Angle_minus2	* (.03571) +
-										Angle_minus3	* (.01190) +
-										Angle_minus4	* (-.01190) +
-										Angle_minus5	* (-.03571) +
-										Angle_minus6	* (-.05952) +
-										Angle_minus7	* (-.08333)) / ((Angle_0_Time - Angle_minus7_Time) / (1000000 * 7));
 
-	SetPointAngle = SetPointAngle - 0.004 * Error;
+
+
+	AngleDerivative = Gain_Derivative * (Angle_0 		* (.08333) +
+		Angle_minus1 * (.05952) +
+		Angle_minus2 * (.03571) +
+		Angle_minus3 * (.01190) +
+		Angle_minus4 * (-.01190) +
+		Angle_minus5 * (-.03571) +
+		Angle_minus6 * (-.05952) +
+		Angle_minus7 * (-.08333)) / ((Angle_0_Time - Angle_minus7_Time) / (1000000 * 7));
+
+	SetPointAngle = SetPointAngle - 0.0001 * Error;
 	Serial.print(micros());
 	Serial.print(',');
-	Serial.print(SetPointAngle,4);
+	Serial.print(SetPointAngle, 4);
 	Serial.print(',');
-	Serial.println(Angle_0,4);
+	Serial.println(Angle_0, 4);
 
 	PIDOutput = AngleProportional + AngleIntegral + AngleDerivative + Gain_Rotor_Speed * PIDOutput;
-	
+
 	if (PIDOutput > 0) {
 		PIDOutput = PIDOutput + 1411;
 	}
@@ -252,7 +256,7 @@ void pid_controller() {
 		PIDOutput = 0;
 	}
 
-	SendSpeed(PIDOutput);
+	SendSpeed(PIDOutput+Impulse);
 }
 
 void get_angle() {
@@ -285,7 +289,7 @@ void get_angle() {
 	Angle_minus2_Time = Angle_minus1_Time;
 	Angle_minus1 = Angle_0;
 	Angle_minus1_Time = Angle_0_Time;
-	
+
 
 	// Read the MPU9250 sensor
 	if (IMU.readSensor() < 0) {
